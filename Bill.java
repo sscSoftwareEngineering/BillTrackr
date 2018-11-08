@@ -20,13 +20,12 @@ public class Bill {
     //Constructors
     /**
      * Create an unpaid bill to send to the database
-     * @param billID
      * @param companyID
      * @param billDueDate
      * @param billDueAmount 
      */
-    Bill(int billID, int companyID, LocalDate billDueDate, BigDecimal billDueAmount) {
-        this(billID, companyID, billDueDate, billDueAmount, "");
+    Bill(int companyID, LocalDate billDueDate, BigDecimal billDueAmount) {
+        this(0, companyID, billDueDate, billDueAmount, "");
     }
     /**
      * Create an unpaid bill from the database including the name
@@ -110,21 +109,22 @@ public class Bill {
         return billPaidAmount;
     }
     public void setBillPaidAmount(BigDecimal billPaidAmount) {
-        if (billPaidAmount.compareTo(BigDecimal.ZERO) == 1) {//Greater than 0
-            this.billPaidAmount = billPaidAmount;
+        if (billPaidAmount != null) {
+            if (billPaidAmount.compareTo(BigDecimal.ZERO) == 1) {//Greater than 0
+                this.billPaidAmount = billPaidAmount;
+            }
         }
     }
     public String getCompName() {
         return compName;
     }
     
-    public String toStringUnpaid() {
-        return String.format("%d, %d, \"%s\", %s, $%.2f", 
+    public String toString() {
+        if (billPaidDate == null) {
+            return String.format("%d, %d, \"%s\", %s, $%.2f, , ", 
                 billID, companyID, compName, billDueDate, billDueAmount);
-    }
-    
-    public String toStringPaid() {
-        return String.format("%d, %d, \"%s\", %s, $%.2f%n, %s, $%.2f", 
+        }
+        return String.format("%d, %d, \"%s\", %s, $%.2f, %s, $%.2f", 
                 billID, companyID, compName, billDueDate, billDueAmount, 
                 billPaidDate, billPaidAmount);
     }
