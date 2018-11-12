@@ -104,8 +104,7 @@ public class BillTrackrUI {
                 case ""://Exit
                     break;
                 default:
-                    println("That is not a valid option");
-                    println("");
+                    println("That is not a valid option\n");
                     break;
             }
         } while (!mainChoice.equals(""));
@@ -121,30 +120,41 @@ public class BillTrackrUI {
             print("> ");
             choice = SCANNER.nextLine();
             if (!choice.equals("")) {
-                try{
-                    int i = Integer.parseInt(choice);
-                    Bill b = getBill(i);
-                    if(b == null) {
-                        throw new NumberFormatException();
-                    }
-                    println(Bill.structureUnpaid());
-                    println(b.toString());
-                    
-                    try {
-                        print("Enter date paid in YYYY-MM-DD format: ");
-                        LocalDate paidDate = LocalDate.parse(SCANNER.nextLine());
-                        print("Enter the amount paid: ");
-                        BigDecimal paidAmount = new BigDecimal(SCANNER.nextLine());
-                        
-                        b.setBillPaidDate(paidDate);
-                        b.setBillPaidAmount(paidAmount);
-                        
-                        println("Updated " + updateBill(b) + " record(s)");
-                    } catch (DateTimeParseException | NumberFormatException ex) {
-                        println("That is not valid input. Please try again.");
-                    }
-                } catch (NumberFormatException ex) {
-                    println("That is not a valid option");
+                int num;
+                try {
+                    num = Integer.parseInt(choice);
+                } catch (NumberFormatException e) {
+                    println("That is not a valid option\n");
+                    break;
+                }
+                
+                Bill b = getBill(num);
+                if(b == null) {
+                    println("That is not a valid option\n");
+                    break;
+                }
+                println(Bill.structureUnpaid());
+                println(b.toString());
+                
+                boolean update = false;
+                LocalDate paidDate = null;
+                BigDecimal paidAmount = null;
+                try {
+                    print("Enter date paid in YYYY-MM-DD format: ");
+                    paidDate = LocalDate.parse(SCANNER.nextLine());
+                    print("Enter the amount paid: ");
+                    paidAmount = new BigDecimal(SCANNER.nextLine());
+
+                    update = true;
+                } catch (DateTimeParseException | NumberFormatException ex) {
+                    println("That is not valid input. Please try again.");
+                }
+                
+                if (update) {
+                    b.setBillPaidDate(paidDate);
+                    b.setBillPaidAmount(paidAmount);
+
+                    println("Updated " + updateBill(b) + " record(s)");
                 }
             }
             println("");
@@ -288,6 +298,7 @@ public class BillTrackrUI {
 
             if (edit == 0) {
                 b.setBillPaidDate(null);
+                b.setBillPaidAmount(null);
 
             } else if (edit == 1) {
                 print("Enter date paid[" + b.getBillPaidDate()+ "]: ");
@@ -417,17 +428,10 @@ public class BillTrackrUI {
     }
     
     private static int updateBill(Bill b) {
-        boolean paid = true;
-        if (b.getBillPaidAmount() == null || b.getBillPaidDate() == null) {
-            paid = false;
-        }
-        
         String query = "UPDATE Bills "
-                + "SET CompanyID = ?, BillDueDate = ?, BillDueAmount = ?";
-        if (paid) {
-            query += ", BillPaidDate = ?, BillPaidAmount = ?";
-        }
-        query += " WHERE BillID = ?;";
+                + "SET CompanyID = ?, BillDueDate = ?, BillDueAmount = ?"
+                + ", BillPaidDate = ?, BillPaidAmount = ? "
+                + "WHERE BillID = ?;";
         
         try (
                 Connection conn = connect();
@@ -436,13 +440,9 @@ public class BillTrackrUI {
             ps.setInt(1, b.getCompanyID());
             ps.setObject(2, b.getBillDueDate());
             ps.setBigDecimal(3, b.getBillDueAmount());
-            if(paid) {
-                ps.setObject(4, b.getBillPaidDate());
-                ps.setBigDecimal(5, b.getBillPaidAmount());
-                ps.setInt(6, b.getBillID());
-            } else {
-                ps.setInt(4, b.getBillID());
-            }
+            ps.setObject(4, b.getBillPaidDate());
+            ps.setBigDecimal(5, b.getBillPaidAmount());
+            ps.setInt(6, b.getBillID());
             return ps.executeUpdate();
             
         } catch (SQLException ex) {
@@ -486,6 +486,7 @@ public class BillTrackrUI {
         }
         return 0;
     }
+    
     private static Connection connect() throws SQLException {
         String sqlURL = "jdbc:mysql://" + hostname + ":" + port + "/" + db
                 + "?useSSL=false";
