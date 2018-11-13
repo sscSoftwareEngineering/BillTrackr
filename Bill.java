@@ -119,6 +119,7 @@ public class Bill {
         return compName;
     }
     
+    @Override
     public String toString() {
         if (billPaidDate == null) {
             return String.format("%d, %d, \"%s\", %s, $%.2f, , ", 

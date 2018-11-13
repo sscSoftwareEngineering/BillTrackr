@@ -5,74 +5,48 @@
  */
 package billTrackr;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.DriverManager;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList;
-import java.util.Properties;
 import java.util.Scanner;
 
 public class BillTrackrUI {
     private static final Scanner SCANNER = new Scanner(System.in);
-    private static String username;
-    private static String password;
-    private static String db = "BillTrackr";
-    private static String hostname = "localhost";
-    private static String port = "3306";
+    private static DataAccess da;
     
     public static void main(String[] args) {
         
         println("Welcome to BillTrackr");
-        // TODO Remove dev server in production
-        Properties prop = new Properties();
-        String filename = "config.properties";
-        try (InputStream input = BillTrackrUI.class.getResourceAsStream(filename);) {
-            if (input != null) {
-                prop.load(input);
-                System.err.println("Trying to connect to dev server. Remove in final");
-                username = prop.getProperty("dbuser");
-                password = prop.getProperty("dbpass");
-                db = prop.getProperty("database");
-                hostname = prop.getProperty("dbhostname");
-                port = prop.getProperty("dbport");
-                Connection temp = connect();
-                println("Welcome dev");
-            } else {
-                throw new IOException();
-            }
-        } catch (IOException | SQLException e) {
+        da = new DataAccess();
+        if (da.isConnected()) {
+            println("Welcome dev");
+        } else {
             String input;
             
             println("Please enter your database details");
             print("Username: ");
-            username = SCANNER.nextLine();
+            String username = SCANNER.nextLine();
             
             print("Password: ");
-            password = SCANNER.nextLine();
+            String password = SCANNER.nextLine();
             
-            print("Database[" + db + "]: ");
+            print("Database: ");
             input = SCANNER.nextLine();
-            db = input.equals("") ? db : input;
+            String db = input.equals("") ? "BillTrackr" : input;
             
-            print("Hostname[" + hostname + "]: ");
+            print("Hostname[localhost]: ");
             input = SCANNER.nextLine();
-            hostname = input.equals("") ? hostname : input;
+            String hostname = input.equals("") ? "localhost" : input;
             
-            print("Port[" + port + "]: ");
+            print("Port[port]: ");
             input = SCANNER.nextLine();
-            port = input.equals("") ? port : input;
+            String port = input.equals("") ? "3306" : input;
+            
+            da = new DataAccess(username, password, db, hostname, port);
 
-            try (Connection temp = connect()) {
+            if (da.isConnected()) {
                 println("Connected");
-            }
-            catch (SQLException ex) {
+            } else {
                 println("Connection Failed");
                 println("Press ENTER to exit.");
                 SCANNER.nextLine();
@@ -112,23 +86,27 @@ public class BillTrackrUI {
     }
     
     private static void payBillsUI() {
-        String choice;
+        String payBillsChoice;
         do {
-            printUnpaidBills();
+            println(Bill.structureUnpaid());
+            da.getUnpaidBills().forEach((b) -> {
+                println(b.toString());
+            });
+            
             println("Enter the number of a bill you'd like to mark paid");
             println("or press ENTER to exit");
             print("> ");
-            choice = SCANNER.nextLine();
-            if (!choice.equals("")) {
+            payBillsChoice = SCANNER.nextLine();
+            if (!payBillsChoice.equals("")) {
                 int num;
                 try {
-                    num = Integer.parseInt(choice);
+                    num = Integer.parseInt(payBillsChoice);
                 } catch (NumberFormatException e) {
-                    println("That is not a valid option\n");
+                    println("That id does not exist\n");
                     break;
                 }
                 
-                Bill b = getBill(num);
+                Bill b = da.getBill(num);
                 if(b == null) {
                     println("That is not a valid option\n");
                     break;
@@ -154,11 +132,11 @@ public class BillTrackrUI {
                     b.setBillPaidDate(paidDate);
                     b.setBillPaidAmount(paidAmount);
 
-                    println("Updated " + updateBill(b) + " record(s)");
+                    println("Updated " + da.updateBill(b) + " record(s)");
                 }
             }
             println("");
-        } while (!choice.equals(""));
+        } while (!payBillsChoice.equals(""));
     }
     
     private static void manageBillsUI() {
@@ -173,9 +151,8 @@ public class BillTrackrUI {
             manageBillsChoice = SCANNER.nextLine();
             switch (manageBillsChoice) {
                 case "1"://Add a new bill
-                    println("");
                     try {
-                        print("Enter company ID number: ");
+                        print("\nEnter company ID number: ");
                         int companyID = Integer.parseInt(SCANNER.nextLine());
                         print("Enter due date in YYYY-MM-DD format: ");
                         LocalDate dueDate = LocalDate.parse(SCANNER.nextLine());
@@ -184,24 +161,26 @@ public class BillTrackrUI {
                         
                         Bill b = new Bill(companyID, dueDate, dueAmount);
                         
-                        println("Inserted " + createBill(b) + " record(s)");
+                        println("Inserted " + da.createBill(b) + " record(s)");
                     } catch (DateTimeParseException | NumberFormatException e) {
                         println("That is not valid input. Please try again.");
                     }
                     break;
                 case "2"://Edit an existing bill
-                    println("");
-                    printBills();
+                    println("\n" + Bill.structurePaid());
+                    da.getAllBills().forEach((b) -> {
+                        println(b.toString());
+                    });
+                    
                     String editChoice;
                     do {
-                        println("");
-                        println("Enter the number of a bill you'd like to edit");
+                        println("\nEnter the number of a bill you'd like to edit");
                         println("or press ENTER to exit");
                         print("> ");
                         editChoice = SCANNER.nextLine();
                         try {
                             int i = Integer.parseInt(editChoice);
-                            Bill b = getBill(i);
+                            Bill b = da.getBill(i);
                             if (b == null) {
                                 println("That id does not exist.");
                             } else {
@@ -213,23 +192,26 @@ public class BillTrackrUI {
                     } while (!editChoice.equals(""));
                     break;
 
+
                 case "3"://Delete an existing bill
-                    println("");
-                    printBills();
+                    println("\n" + Bill.structurePaid());
+                    da.getAllBills().forEach((b) -> {
+                        println(b.toString());
+                    });
+                    
                     String deleteChoice;
                     do {
-                        println("");
-                        println("Enter the number of a bill you'd like to delete");
+                        println("\nEnter the number of a bill you'd like to delete");
                         println("or press ENTER to exit");
                         print("> ");
                         deleteChoice = SCANNER.nextLine();
                         try {
                             int i = Integer.parseInt(deleteChoice);
-                            Bill b = getBill(i);
+                            Bill b = da.getBill(i);
                             if (b == null) {
                                 println("That id does not exist.");
                             } else {
-                                deleteBill(b);
+                                da.deleteBill(b);
                             }
                         } catch (NumberFormatException ex) {
                             println("That is not a valid option");
@@ -325,173 +307,11 @@ public class BillTrackrUI {
                 }
             }
 
-            println("Updated " + updateBill(b) + " record(s)");
+            println("Updated " + da.updateBill(b) + " record(s)");
         } catch (DateTimeParseException | NumberFormatException ex) {
             println("That is not valid input. Please try again.");
         }
 
-    }
-    
-    private static void printBills() {
-        String query = "SELECT BillID, b.CompanyID, CompName, BillDueDate, "
-                + "BillDueAmount, BillPaidDate, BillPaidAmount "
-                + "FROM Bills b JOIN Companies c ON c.CompanyID = b.CompanyID;";
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ResultSet rs = ps.executeQuery();
-            
-            ArrayList<Bill> bills = new ArrayList();
-            
-            println(Bill.structurePaid());
-            while(rs.next()) {
-                int billID = rs.getInt("BillID");
-                int companyID = rs.getInt("CompanyID");
-                String compName = rs.getString("CompName");
-                LocalDate billDueDate = rs.getObject("BillDueDate", LocalDate.class);
-                BigDecimal billDueAmount = rs.getBigDecimal("BillDueAmount");
-                LocalDate billPaidDate = rs.getObject("BillPaidDate", LocalDate.class);
-                BigDecimal billPaidAmount = rs.getBigDecimal("BillPaidAmount");
-                
-                bills.add(new Bill(billID, companyID, billDueDate, billDueAmount, billPaidDate, billPaidAmount, compName));
-            }
-            bills.forEach((Bill b) -> {
-                println(b.toString());
-            });
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-    }
-    
-    private static void printUnpaidBills() {
-        String query = "SELECT BillID, b.CompanyID, CompName, BillDueDate, BillDueAmount "
-                + "FROM Bills b JOIN Companies c ON c.CompanyID = b.CompanyID "
-                + "WHERE b.BillPaidDate IS NULL;";
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ResultSet rs = ps.executeQuery();
-            
-            ArrayList<Bill> bills = new ArrayList();
-            
-            println(Bill.structureUnpaid());
-            while(rs.next()) {
-                int billID = rs.getInt("BillID");
-                int companyID = rs.getInt("CompanyID");
-                String compName = rs.getString("CompName");
-                LocalDate billDueDate = rs.getObject("BillDueDate", LocalDate.class);
-                BigDecimal billDueAmount = rs.getBigDecimal("BillDueAmount");
-                
-                bills.add(new Bill(billID, companyID, billDueDate, billDueAmount, compName));
-            }
-            bills.forEach((Bill b) -> {
-                println(b.toString());
-            });
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-    }
-    
-    private static Bill getBill(int i) {
-        Bill b = null;
-        String query = "SELECT BillID, b.CompanyID, CompName, BillDueDate, "
-                + "BillDueAmount, BillPaidDate, BillPaidAmount "
-                + "FROM Bills b JOIN Companies c ON c.CompanyID = b.CompanyID "
-                + "WHERE b.BillID = ?;";
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ps.setInt(1, i);
-            
-            ResultSet rs = ps.executeQuery();
-            
-            while(rs.next()) {
-                int billID = rs.getInt("BillID");
-                int companyID = rs.getInt("CompanyID");
-                String compName = rs.getString("CompName");
-                LocalDate billDueDate = rs.getObject("BillDueDate", LocalDate.class);
-                BigDecimal billDueAmount = rs.getBigDecimal("BillDueAmount");
-                LocalDate billPaidDate = rs.getObject("BillPaidDate", LocalDate.class);
-                BigDecimal billPaidAmount = rs.getBigDecimal("BillPaidAmount");
-                
-                b = new Bill(billID, companyID, billDueDate, billDueAmount, 
-                        billPaidDate, billPaidAmount, compName);
-            }
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-        
-        return b;
-    }
-    
-    private static int updateBill(Bill b) {
-        String query = "UPDATE Bills "
-                + "SET CompanyID = ?, BillDueDate = ?, BillDueAmount = ?"
-                + ", BillPaidDate = ?, BillPaidAmount = ? "
-                + "WHERE BillID = ?;";
-        
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ps.setInt(1, b.getCompanyID());
-            ps.setObject(2, b.getBillDueDate());
-            ps.setBigDecimal(3, b.getBillDueAmount());
-            ps.setObject(4, b.getBillPaidDate());
-            ps.setBigDecimal(5, b.getBillPaidAmount());
-            ps.setInt(6, b.getBillID());
-            return ps.executeUpdate();
-            
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-        return 0;
-    }
-    
-    private static int createBill(Bill b) {
-        String query = "INSERT INTO Bills "
-                + "(CompanyID, BillDueDate, BillDueAmount) "
-                + "Values (?, ?, ?)";
-        
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ps.setInt(1, b.getCompanyID());
-            ps.setObject(2, b.getBillDueDate());
-            ps.setBigDecimal(3, b.getBillDueAmount());
-            
-            return ps.executeUpdate();
-            
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-        return 0;
-    }
-    
-    private static int deleteBill(Bill b) {
-        String query = "DELETE FROM Bills WHERE BillID = ?;";
-        try (
-                Connection conn = connect();
-                PreparedStatement ps = conn.prepareStatement(query);
-        ) {
-            ps.setInt(1, b.getBillID());
-            
-            return ps.executeUpdate();
-        } catch (SQLException ex) {
-            println(ex.getMessage());
-        }
-        return 0;
-    }
-    
-    private static Connection connect() throws SQLException {
-        String sqlURL = "jdbc:mysql://" + hostname + ":" + port + "/" + db
-                + "?useSSL=false";
-        
-        return DriverManager.getConnection(sqlURL, username, password);
     }
     
     private static void println(String text) {
