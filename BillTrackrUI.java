@@ -178,16 +178,18 @@ public class BillTrackrUI {
                         println("or press ENTER to exit");
                         print("> ");
                         editChoice = SCANNER.nextLine();
-                        try {
-                            int i = Integer.parseInt(editChoice);
-                            Bill b = da.getBill(i);
-                            if (b == null) {
-                                println("That id does not exist.");
-                            } else {
-                                editBillsUI(b);
+                        if (!editChoice.equals("")) {
+                            try {
+                                int i = Integer.parseInt(editChoice);
+                                Bill b = da.getBill(i);
+                                if (b == null) {
+                                    println("That id does not exist.");
+                                } else {
+                                    editBillsUI(b);
+                                }
+                            } catch (NumberFormatException ex) {
+                                println("That is not a valid option");
                             }
-                        } catch (NumberFormatException ex) {
-                            println("That is not a valid option");
                         }
                     } while (!editChoice.equals(""));
                     break;
@@ -205,16 +207,18 @@ public class BillTrackrUI {
                         println("or press ENTER to exit");
                         print("> ");
                         deleteChoice = SCANNER.nextLine();
-                        try {
-                            int i = Integer.parseInt(deleteChoice);
-                            Bill b = da.getBill(i);
-                            if (b == null) {
-                                println("That id does not exist.");
-                            } else {
-                                da.deleteBill(b);
+                        if (!deleteChoice.equals("")) {
+                            try {
+                                int i = Integer.parseInt(deleteChoice);
+                                Bill b = da.getBill(i);
+                                if (b == null) {
+                                    println("That id does not exist.");
+                                } else {
+                                    da.deleteBill(b);
+                                }
+                            } catch (NumberFormatException ex) {
+                                println("That is not a valid option");
                             }
-                        } catch (NumberFormatException ex) {
-                            println("That is not a valid option");
                         }
                     } while (!deleteChoice.equals(""));
                     break;
