@@ -17,41 +17,36 @@ public class BillTrackrUI {
     public static void main(String[] args) {
         
         println("Welcome to BillTrackr");
-        da = new DataAccess();
-        if (da.isConnected()) {
-            println("Welcome dev");
-        } else {
-            String input;
-            
-            println("Please enter your database details");
-            print("Username: ");
-            String username = SCANNER.nextLine();
-            
-            print("Password: ");
-            String password = SCANNER.nextLine();
-            
-            print("Database: ");
-            input = SCANNER.nextLine();
-            String db = input.equals("") ? "BillTrackr" : input;
-            
-            print("Hostname[localhost]: ");
-            input = SCANNER.nextLine();
-            String hostname = input.equals("") ? "localhost" : input;
-            
-            print("Port[port]: ");
-            input = SCANNER.nextLine();
-            String port = input.equals("") ? "3306" : input;
-            
-            da = new DataAccess(username, password, db, hostname, port);
+        String input;
 
-            if (da.isConnected()) {
-                println("Connected");
-            } else {
-                println("Connection Failed");
-                println("Press ENTER to exit.");
-                SCANNER.nextLine();
-                System.exit(0);
-            }
+        println("Please enter your database details");
+        print("Username: ");
+        String username = SCANNER.nextLine();
+
+        print("Password: ");
+        String password = SCANNER.nextLine();
+
+        print("Database: ");
+        input = SCANNER.nextLine();
+        String db = input.equals("") ? "BillTrackr" : input;
+
+        print("Hostname[localhost]: ");
+        input = SCANNER.nextLine();
+        String hostname = input.equals("") ? "localhost" : input;
+
+        print("Port[3306]: ");
+        input = SCANNER.nextLine();
+        String port = input.equals("") ? "3306" : input;
+
+        da = new DataAccess(username, password, db, hostname, port);
+
+        if (da.isConnected()) {
+            println("Connected");
+        } else {
+            println("Connection Failed");
+            println("Press ENTER to exit.");
+            SCANNER.nextLine();
+            System.exit(0);
         }
         
         String mainChoice;

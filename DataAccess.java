@@ -5,8 +5,6 @@
  */
 package billTrackr;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -15,32 +13,9 @@ import java.sql.SQLException;
 import java.sql.DriverManager;
 import java.time.LocalDate;
 import java.util.ArrayList;
-import java.util.Properties;
 
 public class DataAccess {
     private Connection conn;
-    
-    DataAccess() {
-        //Connect with a preconfigured account
-        Properties prop = new Properties();
-        final String filename = "config.properties";
-        try (InputStream input = DataAccess.class.getResourceAsStream(filename);) {
-            if (input != null) {
-                prop.load(input);
-                System.err.println("Trying to connect to dev server. Remove in final");
-                String user = prop.getProperty("dbuser");
-                String pass = prop.getProperty("dbpass");
-                String db = prop.getProperty("database");
-                String hostname = prop.getProperty("dbhostname");
-                String port = prop.getProperty("dbport");
-                
-                conn = getConnection(user, pass, db, hostname, port);
-            }
-        } catch (IOException e) {
-            //Either there is no preconfigured account
-            //or the details are wrong.
-        }
-    }
     
     DataAccess(String user, String pass, String db, String hostname, String port) {
         conn = getConnection(user, pass, db, hostname, port);
